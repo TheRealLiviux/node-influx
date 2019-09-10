@@ -231,6 +231,34 @@ export class Pool {
     return this.text(options).then(res => JSON.parse(res));
   }
 
+     /**
+      * Makes a request and calls back with the response, merging all the chunks in a single array
+      */
+  public chunked(options: IPoolRequestOptions options): Promise<any> {
+    return this.text(options).then(function (res) {
+ 			var dechunked = {results:[]};
+ 			var chunks = res.split(/\n/g);
+ 			chunks.forEach(function(chunk,i) {
+ 				if(chunk.length > 0) {
+ 					var singleResult = JSON.parse(chunk);
+ 					if(singleResult.results) {
+ 						var statement = singleResult.results[0].statement_id;
+ 						if(!dechunked.results[0+statement])
+ 							dechunked.results[0+statement]={
+ 								"statement_id":statement,
+ 								"series":[]
+ 								};
+ 						dechunked.results[statement].series = dechunked.results[statement].series.concat( singleResult.results[0].series );
+ 					}
+ 					else
+ 						console.log("INVALID RESULT: ",chunk);
+ 				}
+ 			});
+ 			//~ console.log("DECHUNKED RES: ",JSON.stringify(dechunked));
+ 			return dechunked;
+ 		});
+     };
+
   /**
    * Makes a request and resolves with the plain text response,
    * if possible. An error is raised on a non-2xx status code.
